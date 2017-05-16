@@ -2,13 +2,12 @@
 
 This is a MapR-internal repo that contains scripts to assist with running
 the Yahoo Cloud Serving Benchmark (YCSB) against MapR-DB, Cassandra
-and HBase.  There's also some guidance on setting up clustershell,
-which is a prerequistite.
+and HBase.
 
 Using these scripts, you can:
-* Create tables according to best practices
-* Manage running the ycsb client on a set of machines
+* Manage running the YCSB client on a set of machines
 * Manage copying the output and result files from each machine when workloads complete
+* Create tables according to best practices
 * Compute throughput and latency statistics for viewing or export to CSV
 * Run multiple workloads with a single command
 * Optionally gather 'nmon' data from the cluster nodes for offline analysis
@@ -25,14 +24,15 @@ and not use a particular performance comparison as part of the buying decision,
 because of the many varieties of workloads and tuning combinations that
 are possible.
 
-**Read the [internal document found here]
-(https://drive.google.com/open?id=1wL_-uXnP3nAA2FpW3XktPxT70_cyYJN0hgAtODlVbCU)
-before proceeding to test.  It contains some key points, settings and "gotchas" 
-to know when running YCSB with a customer.**
+<bold>
+Read the [internal document found here](https://drive.google.com/open?id=1wL_-uXnP3nAA2FpW3XktPxT70_cyYJN0hgAtODlVbCU) 
+ before proceeding to test.  It contains some key points, settings and "gotchas" 
+to know when running YCSB with a customer.
+<bold>
 
 # Prerequisites and Cluster Setup
 
-### Prerequisites for running tests
+## Prerequisites for running tests
 
 Before starting the tests, you should have the following in place:
 
@@ -41,7 +41,7 @@ Before starting the tests, you should have the following in place:
 * A 'launcher node' should be designated which is where you will be running the scripts in this repo
 * Set the environment variable $MAPR_YCSB_HOME to where you extracted these scripts, i.e. ~/mapr-ycsb-scripts
 
-### Scripts to assist with cluster setup
+## Scripts to assist with cluster setup
 
 The tools provided in the tools/ directory can assist with setting up a MapR or Cassandra cluster.  These tools assume you are running a benchmark on AWS and contain some EC2-specific items.  They also assume CentOS 7 and you will want to edit the top of these files to set 
 
@@ -133,6 +133,8 @@ variables to where you've placed the nmon binaries.  The nmon files are
 copied into the results workload directory after the test completes and
 can be viewed later with a GUI tool.  For more information on ```nmon```
 see [this page](http://nmon.sourceforge.net/pmwiki.php).
+
+# Running the tests
 
 ## Create the table
 

@@ -24,11 +24,9 @@ and not use a particular performance comparison as part of the buying decision,
 because of the many varieties of workloads and tuning combinations that
 are possible.
 
-<bold>
 Read the [internal document found here](https://drive.google.com/open?id=1wL_-uXnP3nAA2FpW3XktPxT70_cyYJN0hgAtODlVbCU) 
  before proceeding to test.  It contains some key points, settings and "gotchas" 
 to know when running YCSB with a customer.
-<bold>
 
 # Prerequisites and Cluster Setup
 
@@ -129,7 +127,7 @@ The script ```runall.sh``` is a wrapper around ```ycsbrun.sh``` that will run al
 To assist in debugging bottlenecks or other test issues, ```runall.sh```
 will optionally launch ```nmon``` to gather resource utilization
 statistics on each database node.  To do this you must set the NMON_*
-variables to where you've placed the nmon binaries.  The nmon files are
+variables (in env.sh) to where you've placed the nmon binaries.  The nmon files are
 copied into the results workload directory after the test completes and
 can be viewed later with a GUI tool.  For more information on ```nmon```
 see [this page](http://nmon.sourceforge.net/pmwiki.php).

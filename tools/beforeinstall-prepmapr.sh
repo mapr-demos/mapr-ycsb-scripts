@@ -47,7 +47,7 @@ clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo rpm -Uvh epel-
 clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER \
     'wget --no-cookies --no-check-certificate --header \
 	"Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" \
-	http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.rpm'
+	'http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.rpm'
 clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo $PKGADD_LOCAL jre-8u60-linux-x64.rpm
 
 # add mapr user

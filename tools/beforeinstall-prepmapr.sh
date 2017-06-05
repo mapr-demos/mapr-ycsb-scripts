@@ -59,7 +59,7 @@ clush -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER -c $MKDISKSH --dest=/tmp/
 clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo bash /tmp/mkdisk.sh
 
 # copy the mapr disk info
-clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER -c $DISKSTXT --dest=/tmp/disks.txt
+clush -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER -c $DISKSTXT --dest=/tmp/disks.txt
 
 # install the base package on all nodes
 clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo $PKGADD mapr-fileserver

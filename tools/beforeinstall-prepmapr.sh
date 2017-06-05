@@ -16,23 +16,14 @@ source $MAPR_YCSB_HOME/env.sh
 MAPRREPO_KEY='http://package.mapr.com/releases/pub/maprgpg.key'
 EPELREPO='http://download.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-9.noarch.rpm'
 PKGADD='yum -y install'
-MKDISKSH=$TOOL_HOME/mkdisk.sh
+PKGADD_LOCAL='yum -y localinstall'
+MKDISKSH=$TOOL_HOME/tools/mkdisk.sh
 
 # this creates the disks.txt input file to disksetup
 DISKSTXT=$(mktemp)
 cat >> $DISKSTXT << __EOF
 /dev/nvme0n1p5
 /dev/nvme0n1p6
-/dev/nvme0n1p7
-/dev/nvme0n1p8
-/dev/nvme0n1p9
-/dev/nvme0n1p10
-/dev/nvme0n1p11
-/dev/nvme0n1p12
-/dev/nvme0n1p13
-/dev/nvme0n1p14
-/dev/nvme0n1p15
-/dev/nvme0n1p16
 __EOF
 
 # unmount the ephemeral disk
@@ -45,7 +36,7 @@ clush -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER -o '-t -t' \
 clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo $PKGADD wget
 
 # add repos
-clush -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER -c maprtech.repo --dest=/tmp
+clush -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER -c $MAPR_YCSB_HOME/tools/maprtech.repo --dest=/tmp
 clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo cp /tmp/maprtech.repo /etc/yum.repos.d/
 clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo \
     rpm --import $MAPRREPO_KEY
@@ -56,8 +47,8 @@ clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo rpm -Uvh epel-
 clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER \
     'wget --no-cookies --no-check-certificate --header \
 	"Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" \
-	http://download.oracle.com/otn-pub/java/jdk/8u60-b27/jre-8u60-linux-x64.rpm'
-clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo yum -y localinstall jre-8u60-linux-x64.rpm
+	http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.rpm'
+clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo $PKGADD_LOCAL jre-8u60-linux-x64.rpm
 
 # add mapr user
 clush -o '-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo groupadd -g 5000 mapr

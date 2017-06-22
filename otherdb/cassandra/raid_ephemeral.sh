@@ -87,7 +87,7 @@ mdadm --create --verbose /dev/md0 --level=0 -c256 --raid-devices=$ephemeral_coun
 echo DEVICE $drives | tee /etc/mdadm.conf
 mdadm --detail --scan | tee -a /etc/mdadm.conf
 blockdev --setra 65536 /dev/md0
-mkfs.xfs -s size=4096 -d sw=$ephemeral_count -d su=262144 /dev/md0 
+mkfs.xfs -f /dev/md0
 mount -t xfs -o noatime /dev/md0 /mnt
 
 # Remove xvdb/sdb from fstab

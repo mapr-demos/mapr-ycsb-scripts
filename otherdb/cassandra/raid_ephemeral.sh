@@ -80,10 +80,12 @@ fi
 # overwrite first few blocks in case there is a filesystem, otherwise mdadm will prompt for input
 for drive in $drives; do
   dd if=/dev/zero of=$drive bs=4096 count=1024
+  # XXX this may make the above redundant, I just found it, forces TRIM
+  blkdiscard $drive
 done
 
 partprobe
-mdadm --create --verbose /dev/md0 --level=0 -c256 --raid-devices=$ephemeral_count $drives
+mdadm --create --verbose /dev/md0 --level=0 --raid-devices=$ephemeral_count $drives
 echo DEVICE $drives | tee /etc/mdadm.conf
 mdadm --detail --scan | tee -a /etc/mdadm.conf
 blockdev --setra 65536 /dev/md0

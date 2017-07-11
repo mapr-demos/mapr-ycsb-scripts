@@ -1,16 +1,20 @@
 #!/bin/bash
-
-# install Cassandra on a cluster
 #
-# before running, edit the variables at the top of this file
-#
-# assumes Centos 7.x and cassandra 3.10
+# install Cassandra on a cluster, in a benchmark
+# configuration
 
+##############################################
+# Set these variables before running         #
+##############################################
 source $MAPR_YCSB_HOME/env.sh
 DISKS="/dev/nvme0n1 /dev/nvme1n1 /dev/nvme2n1 /dev/nvme3n1"
 PKGADD='yum -y install'
+PKGADD_LOCAL='yum -y localinstall'
 REMOTE_COPYTO='/home/centos'
-CASS_PKG="http://apache.org/dist/cassandra/3.10/apache-cassandra-3.10-bin.tar.gz"
+CASS_PKG="http://apache.org/dist/cassandra/3.11.0/apache-cassandra-3.11.0-bin.tar.gz"
+CASS_FILE=$(basename $CASS_PKG)
+CASS_EXTRACT_PATH=/mnt
+CASS_DIR=$(basename -s -bin.tar.gz $CASS_PKG)
 EPELREPO='https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm'
 
 # set to i.e. 'md0' if using RAID below
@@ -46,8 +50,9 @@ clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo $PKGADD
 if [ "$DO_RAID" = "true" ]; then
 	echo "preparing ephemeral disks"
 	clush -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER -c $RAID_SCRIPT --dest=/tmp/
+	RS=$(basename $RAID_SCRIPT)
 	clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP \
-	    -l $SSH_REMOTE_USER sudo bash /tmp/raid_ephemeral.sh -d \"$DISKS\"
+	    -l $SSH_REMOTE_USER sudo bash /tmp/$RS -d \"$DISKS\"
 fi
 
 # add cassandra user and group
@@ -58,9 +63,10 @@ clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo adduser
 # install cassandra binary distribution
 echo "downloading and installing files"
 clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER wget $CASS_PKG
-clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo tar xvfz apache-cassandra-3.10-bin.tar.gz -C /mnt
-clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo chgrp -R cassandra /mnt/apache-cassandra-3.10
-clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo chown -R cassandra /mnt/apache-cassandra-3.10
+clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo tar xvfz $CASS_FILE -C $CASS_EXTRACT_PATH
+clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo chgrp -R cassandra $CASS_EXTRACT_PATH/$CASS_DIR
+clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo chgrp -R cassandra $CASS_EXTRACT_PATH/$CASS_DIR
+clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER sudo chown -R cassandra $CASS_EXTRACT_PATH/$CASS_DIR
 
 # uncomment this to use packages instead
 # clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER \
@@ -77,12 +83,13 @@ clush -g $CLUSH_DB_NODE_GROUP --options='-t -t' -l $SSH_REMOTE_USER \
     "hostname -i | xargs echo casshost | awk ' { print \$2, \$1 } ' | sudo tee -a /etc/hosts"
 
 # distribute the config file
-echo "distributing config file"
+echo "distributing config file, using seed nodes $CASS_SEED_HOSTS"
+sed -i $CASS_CONFIG_FILE -e s/__SEEDNODES__/$CASS_SEED_HOSTS/
 clush -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP -c $CASS_CONFIG_FILE --dest=/tmp/cass.new
 clush -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP --options='-t -t' \
-    sudo cp /mnt/apache-cassandra-3.10/conf/cassandra.yaml /tmp/cassandra.bak
+    sudo cp $CASS_EXTRACT_PATH/$CASS_DIR/conf/cassandra.yaml /tmp/cassandra.bak
 clush -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP --options='-t -t' \
-    sudo cp /tmp/cass.new /mnt/apache-cassandra-3.10/conf/cassandra.yaml
+    sudo cp /tmp/cass.new $CASS_EXTRACT_PATH/$CASS_DIR/conf/cassandra.yaml
 
 # set proper limits
 echo "(un)setting limits"
@@ -104,24 +111,22 @@ clush -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP -c $YCSB_HOME --dest=$YCSB_HOM
 clush -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP -c $TOOL_HOME --dest=$TOOL_HOME
 
 # set optimal IO parameters for RAID device or disk
-clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER export CASS_DISK=$CASS_DISK \
-	echo 1 | sudo tee /sys/block/$CASS_DISK/queue/nomerges'
-clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER export CASS_DISK=$CASS_DISK 'echo 8 | \
-    sudo tee /sys/block/$CASS_DISK/queue/read_ahead_kb'
+clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER \
+	'echo 1 | sudo tee /sys/block/md*/queue/nomerges'
+
 clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP \
-    -l $SSH_REMOTE_USER export CASS_DISK=$CASS_DISK 'echo deadline | \
-    sudo tee /sys/block/$CASS_DISK/queue/scheduler'
+    -l $SSH_REMOTE_USER 'echo 8 | \
+    sudo tee /sys/block/md*/queue/read_ahead_kb'
+
+clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP \
+    -l $SSH_REMOTE_USER 'echo deadline | \
+    sudo tee /sys/block/md*/queue/scheduler'
 
 # turn off transparent huge page compaction
 clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER 'echo never | \
     sudo tee /sys/kernel/mm/transparent_hugepage/defrag | \
-    sudo tee /sys/kernel/mm/transparent_hugepage/enabled | \
-    sudo tee -a /etc/rc.local'
+    sudo tee /sys/kernel/mm/transparent_hugepage/enabled'
 
-# copy over the tools
-clush a -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP -c $TOOL_HOME --dest=$REMOTE_COPYTO
-clush a -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP -c $YCSB_HOME --dest=$REMOTE_COPYTO
-
-# start cassandra
-#clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER \
-    'nohup sudo -u cassandra /mnt/apache-cassandra-3.10/bin/cassandra'
+# start cassandra with this command
+# clush --options='-t -t' -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER \
+#   'nohup sudo -u cassandra /mnt/apache-cassandra-3.10/bin/cassandra'

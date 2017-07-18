@@ -21,6 +21,9 @@
 # 
 # - Set $NMON_DIR to the path where you want the nmon output logs.
 #
+# - Set USE_NMON_CLIENT to use/copy nmon on client nodes, USE_NMON_DB for db nodes
+#   (don't enable for both unless they are non-overlapping sets of nodes)
+#
 # Any command line args (such as '-p xyz') are passed to
 # ycsbrun.sh for the 'tran' phase.
 #
@@ -29,10 +32,14 @@ source env.sh
 
 ENVSH=/home/centos/mapr-ycsb-scripts/env.sh
 ENVSH_REMOTE=/home/centos/mapr-ycsb-scripts/env.sh
-#WHICHDB=cassandra2-cql
-WHICHDB=maprdb
 
-USE_NMON=true
+# which database:  cassandra, maprdb or hbase
+#WHICHDB=cassandra2-cql
+#WHICHDB=maprdb
+WHICHDB=hbase
+
+USE_NMON_CLIENT=false
+USE_NMON_DB=true
 NMON=/home/centos/nmon/nmon_x86_64_centos7
 NMON_DIR=/home/centos/nmon_logs
 
@@ -50,10 +57,16 @@ for w in a b c d e f; do
 	echo "clearing caches on db nodes"
 	clush -q -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP -o '-t -t' \
 	    "echo 3 | sudo tee /proc/sys/vm/drop_caches" > /dev/null 2>&1 
-	if [ "$USE_NMON" = "true" ] && [ x"$NMON_DIR" != x ]; then
+	if [ "$USE_NMON_DB" = "true" ] && [ x"$NMON_DIR" != x ]; then
 		echo "starting/restarting nmon on db nodes"
 		clush -q -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP -o '-t -t' "sudo pkill nmon"
 		clush -q -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP -o '-t -t' \
+		    "cd $NMON_DIR && sudo rm -f *.nmon"
+	fi
+	if [ "$USE_NMON_CLIENT" = "true" ] && [ x"$NMON_DIR" != x ]; then
+		echo "starting/restarting nmon on client nodes"
+		clush -q -l $SSH_REMOTE_USER -g $CLUSH_NODE_GROUP -o '-t -t' "sudo pkill nmon"
+		clush -q -l $SSH_REMOTE_USER -g $CLUSH_NODE_GROUP -o '-t -t' \
 		    "cd $NMON_DIR && sudo rm -f *.nmon"
 	fi
 	echo "copying files for workload $w"
@@ -64,14 +77,18 @@ for w in a b c d e f; do
 	clush -q -l $SSH_REMOTE_USER -g $CLUSH_NODE_GROUP \
 	    rm -f $YCSB_HOME/$FILENAME_BASE.stats
 	echo "running workload $w"
-	if [ "$USE_NMON" = "true" ]; then
+	if [ "$USE_NMON_DB" = "true" ]; then
 	    clush -q -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP -o \
 	        '-t -t' "cd $NMON_DIR && sudo $NMON -f -s 10"
 	fi
+	if [ "$USE_NMON_CLIENT" = "true" ]; then
+	    clush -q -l $SSH_REMOTE_USER -g $CLUSH_NODE_GROUP -o \
+	        '-t -t' "cd $NMON_DIR && sudo $NMON -f -s 10"
+	fi
 	if [ "$USE_DOCKER" = "true" ]; then
-		$TOOL_HOME/ycsbrun.sh $WHICHDB dockertran $*
+		$TOOL_HOME/ycsbrun.sh $WHICHDB dockertran -p clientbuffering=true $*
 	else
-		$TOOL_HOME/ycsbrun.sh $WHICHDB tran $*
+		$TOOL_HOME/ycsbrun.sh $WHICHDB tran -p clientbuffering=true  $*
 	fi
 	RESULTDIR_FORMAT=`date '+%Y%m%d_%T'`
 	DIRSTR=$WHICHDB
@@ -88,7 +105,7 @@ for w in a b c d e f; do
 	DIRSTR+=$RESULTDIR_FORMAT
 	mkdir -p $TOOL_HOME/$DIRSTR
 	echo "workload $w complete, copying result files to directory $DIRSTR"
-	if [ "$USE_NMON" = "true" ]; then
+	if [ "$USE_NMON_DB" = "true" ]; then
 		echo "gathering nmon data from db nodes"
 		clush -q -l $SSH_REMOTE_USER -g $CLUSH_DB_NODE_GROUP \
 		    -o '-t -t' "sudo pkill nmon"
@@ -99,6 +116,21 @@ for w in a b c d e f; do
 			for f in *nmon*; do
 				newf=`echo $f | sed -e 's/\*\.//'`
 				mv $f $newf
+				mv $newf $DIRSTR
+			done
+		fi
+	fi
+	if [ "$USE_NMON_CLIENT" = "true" ]; then
+		echo "gathering nmon data from client nodes"
+		clush -q -l $SSH_REMOTE_USER -g $CLUSH_NODE_GROUP \
+		    -o '-t -t' "sudo pkill nmon"
+  		clush -q -l $SSH_REMOTE_USER -g $CLUSH_NODE_GROUP \
+		    --rcopy $NMON_DIR/*.nmon --dest .
+		if ls *nmon* 1> /dev/null 2>&1; then
+			# fixup weird behavior of clush rcopy and wildcards
+			for f in *nmon*; do
+				newf=`echo $f | sed -e 's/\*\.//'`
+				newf=client_$newf
 				mv $newf $DIRSTR
 			done
 		fi

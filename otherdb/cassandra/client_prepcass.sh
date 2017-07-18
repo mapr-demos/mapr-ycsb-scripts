@@ -6,6 +6,9 @@ EPELREPO='https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 REMOTE_COPYTO='/home/centos'
 PKGADD='yum -y install'
 PKGADD_LOCAL='yum -y localinstall'
+NMON=/home/centos/nmon/nmon_x86_64_centos7
+REMOTE_NMON=/home/centos/nmon/
+NMON_DIR=/home/centos/nmon_logs
 
 # add some useful packages
 clush --options='-t -t' -g $CLUSH_NODE_GROUP -l $SSH_REMOTE_USER sudo $PKGADD dstat iperf wget
@@ -21,3 +24,7 @@ clush -o '-t -t' -g $CLUSH_NODE_GROUP -l $SSH_REMOTE_USER sudo $PKGADD_LOCAL jdk
 # copy over the tools
 clush -g $CLUSH_NODE_GROUP -l $SSH_REMOTE_USER -c $TOOL_HOME --dest=$REMOTE_COPYTO
 clush -g $CLUSH_NODE_GROUP -l $SSH_REMOTE_USER -c $YCSB_HOME --dest=$REMOTE_COPYTO
+
+# copy nmon binaries
+clush -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER mkdir -p $NMON_DIR $REMOTE_NMON
+clush -g $CLUSH_DB_NODE_GROUP -l $SSH_REMOTE_USER -c $NMON --dest=$REMOTE_NMON

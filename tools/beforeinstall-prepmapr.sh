@@ -14,7 +14,7 @@
 source $MAPR_YCSB_HOME/env.sh
 
 MAPRREPO_KEY='http://package.mapr.com/releases/pub/maprgpg.key'
-EPELREPO='http://download.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-9.noarch.rpm'
+EPELREPO='https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm'                    
 PKGADD='yum -y install'
 PKGADD_LOCAL='yum -y localinstall'
 MKDISKSH=$TOOL_HOME/tools/mkdisk.sh

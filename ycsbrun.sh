@@ -181,7 +181,7 @@ function func_one() {
     (cd $YCSB_HOME && $YCSB_HOME/bin/ycsb $mode hbase10 -threads \
         $threads -P $WORKLOAD -p table=$TABLE -p columnfamily=$COLUMNFAMILY \
         -p exportfile=$YCSB_HOME/$FILENAME_BASE.stats.$myinst -s $* \
-	-cp /YCSBRUN.FAKE:`/opt/mapr/bin/mapr classpath` 2>&1) | \
+	-cp /YCSBRUN.FAKE:`hbase classpath` 2>&1) | \
         tee $FILENAME_BASE.out.$myinst; \
         egrep -v "\[[A-Z\-]+\], >?[0-9]+, [0-9]+" $YCSB_HOME/$FILENAME_BASE.stats.$myinst
   fi
